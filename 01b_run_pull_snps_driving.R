@@ -1,5 +1,5 @@
 setwd("/home/egeoffroy/LD_matrix/")
-source("pull_snps_driving.R")
+source("01_pull_snps_driving.R")
 "%&%" <- function(a,b) paste(a,b, sep='')
 
 argv <- commandArgs(trailingOnly = TRUE)
