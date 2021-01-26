@@ -5,4 +5,4 @@ Scripts to build LD matrices through plink
 - plink
 - R packages: dplyr, glmnet, reshape2, methods, doMC, doRNG, tidyr, tibble
 
-![alt text](https://github.com/egeoffroy/LD_matrix_build/`COLOC v2 flowchart.png`)
+![COLOC Flowchart](https://github.com/egeoffroy/LD_matrix_build/blob/main/COLOC%20v2%20flowchart.png)
