@@ -1,5 +1,6 @@
 setwd("/home/egeoffroy/LD_matrix/")
-source("01_get_driving_snp.R")
+#source("01_get_driving_snp.R") # this script pulled snps within 1Mb of the driving snp
+source('01_pull_snps_driving.R') # this script pulls snps within 1Mb of the transcriptome start and end sites
 "%&%" <- function(a,b) paste(a,b, sep='')
 
 argv <- commandArgs(trailingOnly = TRUE)

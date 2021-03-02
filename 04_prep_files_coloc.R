@@ -1,23 +1,26 @@
 # This is where the pQTL and GWAS SS files will be formatted for coloc v2 
-# Originally this is Angela's code but it has some changes for TOPMed --> eventually this will need to have parameters to specify genome build so we don't have to rewrite
+# Author: Elyse Geoffroy
 
-library(data.table)
-library(dplyr)
-library(R.utils)
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(R.utils))
 
 "%&%" = function(a,b) paste(a,b,sep="") #'WBC', 'Platelet'
-phenos <- c('Total_cholesterol', 'HDL_cholesterol', 'LDL_cholesterol', 'BMI', 'Waist-hip50', 'Waist-hip51', 'Waist-hip52', 'Chronic_kidney', 'End_renal', 'Diastolic_blood', 'Systolic_blood', 'Diabetes', 'Triglyceride', 'Mean_corpuscular_hemoglobin', 'Hemoglobin', 'Height', 'Glomerular', 'Fasting_insulin', 'Fasting_glucose', 'PR', 'QRS_duration', 'QT_interval', 'Coffee', 'Smoking') # make this into a parameter for pipeline
+#phenos <- c('Total_cholesterol', 'HDL_cholesterol', 'LDL_cholesterol', 'BMI', 'Waist-hip50', 'Waist-hip51', 'Waist-hip52', 'Chronic_kidney', 'End_renal', 'Diastolic_blood', 'Systolic_blood', 'Diabetes', 'Triglyceride', 'Mean_corpuscular_hemoglobin', 'Hemoglobin', 'Height', 'Glomerular', 'Fasting_insulin', 'Fasting_glucose', 'PR_interval', 'QRS_duration', 'QT_interval', 'Coffee', 'Smoking') # make this into a parameter for pipeline
+#phenos <- c('PR_interval', 'QRS_duration', 'QT_interval', 'Coffee', 'Smoking')
+phenos <- c('BMI')
 chrs <- c(1:22)
 #pops <- c('AFA', 'ALL', 'CAU', 'CHN', 'HIS')
 #pop_sample_size <- c(183, 971, 416, 71, 301)
-pops <- c('AFA')
-pop_sample_size <- c(183)
+pops <- c( 'CAU')
+pop_sample_size <-  c( 416)
 for(pop in 1:length(pops)){ #read in pop's .frq file for MAF
   # some file locations may change
   frq <- fread(paste("/home/egeoffroy/LD_matrix/", pops[pop], "_prot_hg38.frq", sep = ''))
   frq <- frq %>% dplyr::select(SNP, MAF)
 
   for(pheno in phenos){ #read in GWAS output file
+    if(!file.exists("/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt") & !file.exists("/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt")){
     GWAS_result <- fread(paste("/home/egeoffroy/Wojcik/Wojcik_build38/gzipped_versions/WojcikG_", pheno, ".txt.gz", sep = '') , header = T)
     GWAS_result$chr_pos <- paste(gsub("chr", "", GWAS_result$chromosome), GWAS_result$base_pair_location, sep = ":")
     GWAS_for_COLOC <- GWAS_result %>% dplyr::select(SNP_hg38, Beta, SE, `Effect-allele-frequency`, `Sample-size`) #subset to COLOC input
@@ -48,11 +51,15 @@ for(pop in 1:length(pops)){ #read in pop's .frq file for MAF
     pQTL_write <- subset(pQTL_write, variant_id %in% snps_in_both)
     pQTL_write <- pQTL_write[order(pQTL_write$gene_id),]
 
+#    if(!file.exists("/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt")){
     # write out the files that will be used to run coloc
-    fwrite(pQTL_write, "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", quote = F, sep = "\t", na = "NA", row.names = F, col.names = T)
-    gzip("/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", destname = "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt.gz") #script may only take .gz values so can't hurt to be too careful
-    fwrite(GWAS_write, "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", row.names = F, col.names = T, sep = "\t", quote = F, na = "NA")
-    gzip("/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt.gz")
-    print("Completed with " %&% pops[pop] %&% ", for " %&% pheno %&% ".")
+    	fwrite(pQTL_write, "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", quote = F, sep = "\t", na = "NA", row.names = F, col.names = T)
+    	gzip("/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", destname = "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt.gz") #script may only take .gz values so can't hurt to be too careful
+    	fwrite(GWAS_write, "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", row.names = F, col.names = T, sep = "\t", quote = F, na = "NA")
+    	gzip("/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt.gz")
+    	print("Completed with " %&% pops[pop] %&% ", for " %&% pheno %&% ".")
+    } else{
+	next
+    }
   }
 }

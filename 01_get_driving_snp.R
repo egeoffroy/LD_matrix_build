@@ -158,10 +158,15 @@ do_covariance <- function(gene_id, cis_gt, rsids, varIDs) {
   cov_df
 }
 
-get_driving_snp <- function(gt_df, snp_annot, driving, cis_window, pop, chrom, gene) {
+get_driving_snp <- function(gt_df, snp_annot, driving, cis_window, pop, chrom, gene, coords) {
   driving <- as.integer(str_split(driving, ':')[[1]][2])
 #  driving <- str_split(driving, ':')[[1]]
-  snp_info <- snp_annot %>% filter((pos >= (driving - cis_window) & !is.na(rsid)) & (pos <= (driving + cis_window)))
+  # HI RYAN THIS NEXT LINE OF CODE IS WHAT I WAS ORIGINALLY USING BUT NOW IM TRYING THE LINE AFTER. 
+  # HOPING THIS HECKIN WORKS
+  #snp_info <- snp_annot %>% filter((pos >= (driving - cis_window) & !is.na(rsid)) & (pos <= (driving + cis_window)))
+
+  snp_info <- snp_annot %>% filter((pos >= (coords[1] - cis_window) & !is.na(rsid)) & (pos <= (coords[2] + cis_window)))
+  print(head(snp_info))
   if (nrow(snp_info) == 0)
     return(NA)
   #cis_gt <- gt_df %>% select(one_of(intersect(snp_info$rsid, colnames(gt_df))))
@@ -171,18 +176,21 @@ get_driving_snp <- function(gt_df, snp_annot, driving, cis_window, pop, chrom, g
   #cis_gt <- matrix(as.matrix(cis_gt), ncol=ncol(cis_gt)) # R is such a bad language.
   #colnames(cis_gt) <- column_labels
   #rownames(cis_gt) <- row_labels
-  cis_gt <- snp_info$rsid
-  cis_gt <- as.data.frame(cis_gt)
+  snp_info$SNP <- paste(snp_info$rsid, snp_info$refAllele, snp_info$effectAllele, sep = ':')
+  cis_gt <- snp_info %>% select(SNP)
+  print(cis_gt)
+#  cis_gt <- as.data.frame(cis_gt)
   names(cis_gt) <- NULL
-  
-  if(length(cis_gt) > 2){
-    	write.table(cis_gt, paste('/home/egeoffroy/LD_matrix/10kb_of_gene/', pop, '_chr_', chrom, '_', gene, '_10kb_of_gene.txt', sep = ''), col.names=F, quote = F, row.names=F)
+  print(nrow(cis_gt))
+  if(nrow(cis_gt) > 2){
+	print(cis_gt)
+    	write.table(as.data.frame(cis_gt), paste('/home/egeoffroy/LD_matrix/1Mb_of_gene_coords/', pop, '_chr_', chrom, '_', gene, '_1Mb_of_gene.txt', sep = ''), col.names=F, quote = F, row.names=F)
   }
 }
 
 main <- function(snp_annot_file, gene_annot_file, genotype_file, expression_file,
                  covariates_file, chrom, prefix, maf=0.01, n_folds=10, n_train_test_folds=5, pop,
-                 seed=NA, cis_window=1e4, alpha=0.5, null_testing=FALSE, protein_file) {
+                 seed=NA, cis_window=1e6, alpha=0.5, null_testing=FALSE, protein_file) {
   gene_annot <- get_gene_annotation(gene_annot_file, chrom)
   expr_df <- get_gene_expression(expression_file, gene_annot)
   samples <- rownames(expr_df)
@@ -297,7 +305,7 @@ main <- function(snp_annot_file, gene_annot_file, genotype_file, expression_file
     	  driving <- weighted_snps_info[weighted_snps_info$weights == max(abs(weighted_snps_info$weights)), 2]
 	  print(driving)
 	  if(length(driving) != 0){
-		  get_driving_snp(gt_df, snp_annot, driving, cis_window, pop, chrom, gene)
+		  get_driving_snp(gt_df, snp_annot, driving, cis_window, pop, chrom, gene, coords)
 	  }
 	#      write.table(weighted_snps_info, file = weights_file, append = TRUE, quote = FALSE, col.names = FALSE, row.names = FALSE, sep = '\t')
           covariance_df <- do_covariance(gene, cis_gt, weighted_snps_info$rsid, weighted_snps_info$varID)

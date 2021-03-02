@@ -3,25 +3,30 @@ library(data.table)
 source('/home/egeoffroy/LD_matrix/05_coloc.R')
 
 # should have an input list of the genes to test in which populations and which chrom they are on?
-phenotype <- 'C-reactive'
-gene_id <- 'SL004783_ENSG00000163221.4' 
-gene <- gsub("\\..*","",gene_id)
-print(gene)
-#pops <- c('AFA', 'ALL', 'CAU', 'CHN', 'HIS')
-pops <- c('CHN')
-pop_sample_sizes <- c(71)
-#pop_sample_sizes <- c(183, 971, 416, 71, 301)
 
-for(pop in pops){
-	for(pop_size in pop_sample_sizes){
-		eqtl <- paste('/home/egeoffroy/LD_matrix/coloc/pQTL_', pop, '_', phenotype, '.txt.gz', sep = '')
-		gwas <- paste('/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED', pop, '_', phenotype, '.txt.gz', sep = '')
-		ld_matrix <- list.files(paste('/home/egeoffroy/LD_matrix/', pop, '_10kb_LDMatrix/', sep = ''), pattern = gene, full.names = T)[[1]][1]
-		#ld_matrix <- paste('/home/egeoffroy/LD_matrix/', pop, '_10kb_LDMatrix/', pop, '_chr_', chrom, '_', gene, '_10kb_LD.ld.gz', sep = '')
-		print(ld_matrix)
-		F_gwas <- fread(gwas, header = T, stringsAsFactors=F)
-		gwas_size <- F_gwas$`sample_size`[1]
-		print(gwas_size)
-		main(eqtl=eqtl, gwas=gwas, mode = 'bse', gene=gene_id, eqtlGeneCol='gene_id', eqtlSNPCol='variant_id', eqtlMAFCol='maf', eqtlSeCol=6, eqtlBetaCol=5, eqtlSampleSize= pop_size, gwasSNPCol=1, LD=ld_matrix, gwasBetaCol=2, gwasSeCol=3, gwasSampleSize=gwas_size, outFile=paste(pop, '_', phenotype, '_', gene, '.txt', sep = ''))
-	}
+coloc_analysis <- function(gene_id=NULL, pop=NULL, pop_size=NULL, phenotype=NULL){
+	gene <- gsub("\\..*","",gene_id)
+	print(gene)
+
+	eqtl <- paste('/home/egeoffroy/LD_matrix/coloc/pQTL_', pop, '_', phenotype, '.txt.gz', sep = '')
+	gwas <- paste('/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED', pop, '_', phenotype, '.txt.gz', sep = '')
+	
+        ld_matrix <- 'T'
+		if(!is.null(ld_matrix)){
+					F_gwas <- fread(gwas, header = T, stringsAsFactors=F)
+					print(F_gwas)
+					gwas_size <- F_gwas$`sample_size`[1]
+					print(gwas_size)
+					if(pop == 'CAU'){ # for some reason CAU uses pvalues instead of bse values
+#						main(eqtl=eqtl, gwas=gwas, directory=paste('/home/egeoffroy/LD_matrix/', pop, '_1Mb_coords_LDMatrix', sep =''),  mode = 'p', gene_list=gene_id, eqtlGeneCol='gene_id', eqtlSNPCol='variant_id', eqtlMAFCol='maf', eqtlSeCol=6, eqtlBetaCol=5, eqtlSampleSize= pop_size, gwasSNPCol=1, LD=ld_matrix, method="cond", gwasBetaCol=2, gwasSeCol=3, gwasSampleSize=gwas_size, outFile=paste('/home/egeoffroy/LD_matrix/coloc_output/', pop, '/', pop, '_', phenotype, '.txt', sep = ''), ld_header = 'T')
+						eqtl1 <- fread(eqtl, header = T, stringsAsFactors=F)
+						gwas1 <- fread(gwas, header = T, stringsAsFactors=F)
+						eqtl1$variant_id <- str_replace_all(eqtl1$variant_id, 'chr', '')
+						gwas1$panel_variant_id <- str_replace_all(gwas1$panel_variant_id, 'chr', '')
+						write.table(eqtl1, eqtl, quote= F, row.names=F)
+						write.table(gwas1, gwas, quote=F, row.names=F)
+					} 
+						main(eqtl=eqtl, gwas=gwas, directory=paste('/home/egeoffroy/LD_matrix/', pop, '_1Mb_coords_LDMatrix', sep =''),  mode = 'bse', gene_list=gene_id, eqtlGeneCol='gene_id', eqtlSNPCol='variant_id', eqtlMAFCol='maf', eqtlSeCol=6, eqtlBetaCol=5, eqtlSampleSize= pop_size, gwasSNPCol=1, LD=ld_matrix, method="cond", gwasBetaCol=2, gwasSeCol=3, gwasSampleSize=gwas_size, outFile=paste('/home/egeoffroy/LD_matrix/coloc_output/', pop, '/', pop, '_', phenotype, '.txt', sep = ''), ld_header = 'T')
+#					}
+				}
 }
