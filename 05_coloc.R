@@ -4,7 +4,7 @@
 
 suppressPackageStartupMessages(library(coloc))
 suppressPackageStartupMessages(library(dplyr))
-
+suppressPackageStartupMessages(library(stringr))
 "%&%" = function(a,b) paste(a,b,sep="")
 
 check.fread<-function(file,header=T,stringsAsFactors=F){
@@ -12,7 +12,19 @@ check.fread<-function(file,header=T,stringsAsFactors=F){
   #Meant to be run in unix environments with the zcat program installed
   #Not for the R environ, but useful for the client
   if (grepl("\\.gz$",file)){
-    try(fread("zcat " %&% file,header=header,stringsAsFactors = stringsAsFactors))
+    data<-tryCatch({
+      fread("zcat " %&% file,header=header,stringsAsFactors = stringsAsFactors)
+      },error=function(cond){
+        message("returned error") 
+        mesasge(cond)
+        return(NA)
+        })
+    if (is.na(data)){
+      data<-fread(file,header=header,stringsAsFactors = stringsAsFactors)
+      return(data)
+    } else {
+      return(data)
+    }                   
   } else {
     fread(file,header=header,stringsAsFactors = stringsAsFactors)
   }
@@ -35,11 +47,11 @@ get_eqtl_snps<-function(gene_id,eqtl_df,snpCol=2,geneCol=1){
   #If the gene is not found in the eqtl df then return an empty list
   #This is a separate function from the effects and pval function because the maf is not always included in the eqtl data, though it is common practice
   eqtl_df<- eqtl_df[eqtl_df[,geneCol] == gene_id,]
-  print(gene_id)
-  print(eqtl_df)
+  # print(gene_id)
+  # print(eqtl_df)
   if (nrow(eqtl_df) == 0) { return(list())}
   snp<-eqtl_df[,snpCol] %>% unlist %>% unname
-  print(snp)
+  # print(snp)
   return(list(snp=snp))
 }
 
@@ -95,7 +107,7 @@ get_gene_eqtl_maf<-function(gene_id,eqtl_df,mafCol=3,geneCol=1,snpCol,snpList, s
   eqtl_df<-eqtl_df[eqtl_df[,geneCol] == gene_id & eqtl_df[,snpCol] %in% snpList,]
   if(!is.null(sigsnps)){
         eqtl_df <- eqtl_df[eqtl_df[,snpCol] %in% sigsnps, ]
-	print(head(eqtl_df))
+	# print(head(eqtl_df))
   }
   if (nrow(eqtl_df) == 0) { return(list())}
   maf<-eqtl_df[,mafCol] %>% unlist %>% unname
@@ -199,8 +211,8 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
 
   #uncomment the follwing lines when running in a Unix/linux environ
    cat("Reading in data\n")
-   eqtldf<-as.data.frame(check.fread(eqtl,header=T,stringsAsFactors = F))
-   gwasdf<-as.data.frame(check.fread(gwas,header=T,stringsAsFactors = F))
+   eqtldf<-as.data.frame(check.fread(eqtl,header=T,stringsAsFactors = F)) %>% distinct()
+   gwasdf<-as.data.frame(check.fread(gwas,header=T,stringsAsFactors = F)) %>% distinct()
 
   #comment out the following lines when running in Unix/Linux environ
 #  cat("Reading in data\n")
@@ -208,12 +220,12 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
   	eqtldf<-read.table(eqtl,header=T,stringsAsFactors = F)
   	eqtldf <- as.data.frame(unique(eqtldf))
   }
-  print(head(eqtldf))
+  #print(head(eqtldf))
   if(nrow(gwasdf) == 0){
 	gwasdf<-read.table(gwas,header=T,stringsAsFactors = F)
         gwasdf <- as.data.frame(unique(gwasdf))
   }
-  print(head(gwasdf))
+  #print(head(gwasdf))
 
 #  cat("Getting gene list\n")
   #gene_list<-get_gene_list(eqtldf)
@@ -248,8 +260,9 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
       print(length(GWAS_effects$beta))
       #print(head(QTL_effects))
       print(length(QTL_effects$beta))
-  
-      if (length(GWAS_effects$beta) != length(QTL_effects$beta)) { print("List of effect sizes of differing lengths. Duplicates SNPs may be present. Please resolve and rerun. Exiting."); return()}
+      # fwrite(QTL_effects,"/home/rschubert1/scratch/test_coloc_for_elyse/QTL_effects.txt",sep='\t')
+      # fwrite(GWAS_effects,"/home/rschubert1/scratch/test_coloc_for_elyse/GWAS_effects.txt",sep='\t')
+      if (length(GWAS_effects$beta) != length(QTL_effects$beta)) { print(gene %&% " Lists of effect sizes of differing lengths. Duplicates SNPs may be present. Please resolve and rerun. Exiting."); next()}
       print('after effect sizes check')
 
 	 # will have to filter out snps from GWAS and eQTL that are in range of ld matrix
@@ -262,18 +275,23 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
         	ld_matrix <- as.matrix(ld_matrix)
         	ld_header <- str_replace(ld_matrix1, '.ld.gz', '.snplist')
 		ld_header <- fread(ld_header, header = F, sep = ':', stringsAsFactors=F)
+		      if (grepl("chr",intersection[1])){
+		        ld_header<-mutate(ld_header,V1=if_else(!grepl("chr",V1),"chr" %&% V1,as.character(V1)))
+		      }  else {
+		        ld_header<-mutate(ld_header,V1=if_else(grepl("chr",V1),gsub("chr","",V1),as.character(V1)))
+		      }
         	ld_header <- paste(ld_header$V1, ld_header$V2, sep =':')
         	colnames(ld_matrix) <- as.list(ld_header)
         	rownames(ld_matrix) <- as.list(ld_header)
 
         	#print(head(ld_matrix))
         	print(dim(ld_matrix))
-	} else {cat(gene, 'gene skipped due to lack of ld matrix file when it was requested to use new version of coloc')}
+	} else {cat(gene, 'gene skipped due to lack of ld matrix file when it was requested to use new version of coloc'); next}
 	}
-
 
       if (!is.null(gwasMAFCol)){
         print("using maf from gwas data set")
+        
         maf<-get_gwas_maf(gwas_df=gwasdf,mafCol=gwasMAFCol,snpCol = gwasSNPCol,snpList=intersection, sigsnps = ld_header)
       } else if(!is.null(eqtlMAFCol)){
         print("using maf from QTL data set")
@@ -282,7 +300,18 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
       
 
 	
-	
+      print("here")
+      GWAS_effects <- data.frame(GWAS_effects,stringsAsFactors = F)
+      QTL_effects <- data.frame(QTL_effects,stringsAsFactors = F)
+      print(str(ld_header))
+      print(GWAS_effects$snp[1])
+      # if(grepl("chr",ld_header[1])){
+      #   GWAS_effects<-mutate(GWAS_effects,snp=if_else(!grepl("chr",snp),"chr" %&% snp,snp))
+      #   QTL_effects<-mutate(QTL_effects,snp=if_else(!grepl("chr",snp),"chr" %&% snp,snp))
+      # } else {
+      #   GWAS_effects<-mutate(GWAS_effects,snp=if_else(grepl("chr",snp),gsub("chr","",snp),snp))
+      #   QTL_effects<-mutate(QTL_effects,snp=if_else(grepl("chr",snp),gsub("chr","",snp),snp))
+      # }	
 	GWAS_effects <- data.frame(GWAS_effects)
 	GWAS_effects <- GWAS_effects[GWAS_effects$snp %in% ld_header, ] #GWAS_effects[GWAS_effects[,gwasSNPCol] %in% ld_header, ]
 	GWAS_effects$snp <- as.character(GWAS_effects$snp)
@@ -294,7 +323,7 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
         print(nrow(QTL_effects))
 
       if(nrow(GWAS_effects) > 0){
-      cat('running coloc')
+      cat('running coloc\n')
       str(list(beta=GWAS_effects$beta, varbeta=GWAS_effects$var,snp=GWAS_effects$snp, N=gwasSampleSize,type="quant"))
       str(list(beta=QTL_effects$beta, varbeta=QTL_effects$var, snp=QTL_effects$snp, N=eqtlSampleSize,type="quant"))
       
@@ -339,44 +368,57 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
 
       if(!is.null(LD)){
         #ld_matrix <- fread(directory %&% gene %&% ', header = F, stringsAsFactors=F)
-	if(!is.null(list.files(directory, pattern = paste(gene, '_1Mb_LD.ld.gz', sep =''), full.names=T)[[1]][1])){
+      	if(!is.null(list.files(directory, pattern = paste(gene, '_1Mb_LD.ld.gz', sep =''), full.names=T)[[1]][1])){
         	ld_matrix1 <- list.files(directory, pattern = paste(gene, '_1Mb_LD.ld.gz', sep =''), full.names=T)[[1]][1]
+        	print(ld_matrix1)
         	ld_matrix <- fread(ld_matrix1, header = F, stringsAsFactors=F)
         	ld_matrix <- as.matrix(ld_matrix)
         	ld_header <- str_replace(ld_matrix1, '.ld.gz', '.snplist')
-		ld_header <- fread(ld_header, header = F, sep = ':', stringsAsFactors=F)
+		      ld_header <- fread(ld_header, header = F, sep = ':', stringsAsFactors=F)
         	ld_header <- paste(ld_header$V1, ld_header$V2, sep =':')
         	colnames(ld_matrix) <- as.list(ld_header)
         	rownames(ld_matrix) <- as.list(ld_header)
 
         	#print(head(ld_matrix))
         	print(dim(ld_matrix))
-	} else {cat(gene, 'gene skipped due to lack of ld matrix file when it was requested to use new version of coloc')}
-      }
+	        } else {cat(gene, 'gene skipped due to lack of ld matrix file when it was requested to use new version of coloc')}
+         }
 
       if (!is.null(gwasMAFCol)){
         print("using maf from gwas data set")
         maf<-get_gwas_maf(gwas_df=gwasdf,mafCol=gwasMAFCol,snpCol = gwasSNPCol,snpList=intersection)
       } else if(!is.null(eqtlMAFCol)){
         print("using maf from QTL data set")
+        print("here")
         maf<-get_gene_eqtl_maf(gene_id=gene,eqtl_df = eqtldf,mafcol=eqtlMAFCol,geneCol=eqtlGeneCol,snpCol=eqtlSNPCol,snpList=intersection)
       }
       # str(maf$maf); str(GWAS_effects$p); str(QTL_effects$p)
-
-	GWAS_effects <- data.frame(GWAS_effects)
+         print("here")
+	      GWAS_effects <- data.frame(GWAS_effects)
+	      QTL_effects <- data.frame(QTL_effects)
+	      print(str(ld_header))
+	      print(GWAS_effects$snp[1])
+	      if(grepl("chr",ld_header[1])){
+	        GWAS_effects<-mutate(GWAS_effects,snp=if_else(!grepl("chr",snp),"chr" %&% snp,snp))
+	        QTL_effects<-mutate(QTL_effects,snp=if_else(!grepl("chr",snp),"chr" %&% snp,snp))
+	      } else {
+	        GWAS_effects<-mutate(GWAS_effects,snp=if_else(grepl("chr",snp),gsub("chr","",snp),snp))
+	        QTL_effects<-mutate(QTL_effects,snp=if_else(grepl("chr",snp),gsub("chr","",snp),snp))
+	      }
         GWAS_effects <- GWAS_effects[GWAS_effects$snp %in% ld_header, ] #GWAS_effects[GWAS_effects[,gwasSNPCol] %in% ld_header, ]
         GWAS_effects$snp <- as.character(GWAS_effects$snp)
         print(nrow(GWAS_effects))
-
-        QTL_effects <- data.frame(QTL_effects)
+         print("now here")
+        
         QTL_effects <- QTL_effects[QTL_effects$snp %in% ld_header, ] #QTL_effects[QTL_effects[,eqtlSNPCol] %in% sig_snps, ]
         QTL_effects$snp <- as.character(QTL_effects$snp)
         print(nrow(QTL_effects))
+         print("here next")
       coloc_result<-coloc.signals(dataset1=list(pvalues=GWAS_effects$p, N=gwasSampleSize,type="quant"),
                                   dataset2=list(pvalues=GWAS_effects$p, N=gwasSampleSize,type="quant"),
                                   MAF=maf$maf, LD=ld_matrix,
                                   method=method,p12=p12,p1=p1,p2=p2,pthr=pthr,r2thr=r2thr,mode=cmode,maxhits=maxhits)
-
+        print("finally here")
       # if ( coloc_result$summary[6]> 0.5 ){
       if (nrow(coloc_result$summary)>0){
         pdfname<-as.character(unlist(strsplit(outFile, split = "_")))

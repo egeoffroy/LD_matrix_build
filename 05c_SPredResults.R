@@ -4,7 +4,7 @@
 library(dplyr)
 library(stringr)
 library(data.table)
-source('05b_run_coloc.R')
+source('/home/rschubert1/scratch/test_coloc_for_elyse/05b_run_coloc.R')
 
 # Get command line arguments
 args <- commandArgs(trailingOnly=TRUE)
@@ -14,7 +14,7 @@ print(pop)
 
 
 files <- list.files('/home/igregga/topmed/proteome/PAGE', pattern = '_bonferroni_all_pheno.csv', recursive = F, full.names=T)
-files2 <- list.files('/home/egeoffroy/topmed/SPrediXcan/Wojcik/baseline', pattern = '_all_pheno.csv' recursive = F, full.names=T)
+files2 <- list.files('/home/egeoffroy/topmed/SPrediXcan/Wojcik/baseline', pattern = '_all_pheno.csv', recursive = F, full.names=T)
 files <- c(files, files2)
 SPrediXcan_Results <- data.frame()
 for(file in files){
@@ -32,9 +32,9 @@ if(pop=='CAU'){sample_size<-416}
 if(pop=='CHN'){sample_size<-71}
 if(pop=='HIS'){sample_size<-301}
 
-SPred_pop <- SPrediXcan_Results %>% filter(Population == pop) %>% select(gene, Phenotype)
+SPred_pop <- SPrediXcan_Results %>% filter(Model == pop) %>% select(gene, Phenotype)
 SPred_pop$Phenotype <- str_replace_all(SPred_pop$Phenotype, 'LDL_choleseterol', 'LDL_cholesterol')
-print(SPred_pop)
+# print(SPred_pop)
 
 #for(i in 1:nrow(SPred_pop)){
 #	row <- SPred_pop[i,]
@@ -45,5 +45,5 @@ for(pheno in phenos){
 	data <- SPred_pop %>% filter(Phenotype == pheno)
 	genes <- unique(data$gene)
 	coloc_analysis(pop=as.character(pop), pop_size=sample_size, phenotype=pheno, gene_id=genes)
-
+  
 }
