@@ -34,9 +34,12 @@ get_eqtl_snps<-function(gene_id,eqtl_df,snpCol=2,geneCol=1){
   #returns the snps in the data frame
   #If the gene is not found in the eqtl df then return an empty list
   #This is a separate function from the effects and pval function because the maf is not always included in the eqtl data, though it is common practice
-  eqtl_df<-eqtl_df[eqtl_df[,geneCol] == gene_id,]
+  eqtl_df<- eqtl_df[eqtl_df[,geneCol] == gene_id,]
+  print(gene_id)
+  print(eqtl_df)
   if (nrow(eqtl_df) == 0) { return(list())}
   snp<-eqtl_df[,snpCol] %>% unlist %>% unname
+  print(snp)
   return(list(snp=snp))
 }
 
@@ -46,6 +49,7 @@ get_gene_eqtl_effects<-function(gene_id,eqtl_df,betaCol,seCol,geneCol=1,snpCol,s
   #filters to the gene in question
   #returns the effect sizes and variances for each snp
   #If the gene is not found in the eqtl df then return an empty list
+  print(gene_id)
   eqtl_df<-eqtl_df[eqtl_df[,geneCol] == gene_id & eqtl_df[,snpCol] %in% snpList,]
   if (nrow(eqtl_df) == 0) { return(list())}
   beta <- eqtl_df[,betaCol] %>% unlist %>% unname
@@ -61,8 +65,8 @@ get_gene_eqtl_pvalue<-function(gene_id,eqtl_df,pvalCol,geneCol=1,snpCol,snpList)
   #returns the pvalue of each snp
   #If the gene is not found in the eqtl df then return an empty list
   #separate function from the effects function because for coloc purposes you only need one or the other, not both
-  eqtl_df<-eqtl_df[eqtl_df[,..snpCol] %in% snpList,]
-  eqtl_df <- eqtl_df[eqtl_df[,..geneCol]==gene_id, ]
+  eqtl_df<-eqtl_df[eqtl_df[,snpCol] %in% snpList,]
+  eqtl_df <- eqtl_df[eqtl_df[,geneCol]==gene_id, ]
   if (nrow(eqtl_df) == 0) { return(list())}
   p<-eqtl_df[,..pvalCol] %>% unlist %>% unname
   return(list(p=p))
@@ -115,7 +119,7 @@ get_gwas_effects<-function(gwas_df,betaCol,seCol,snpCol,snpList){
   #returns the effect sizes and variances for each snp
   #If the gene is not found in the gwas df then return an empty list
   #print(snpList)
-  gwas_df<-gwas_df[gwas_df[,..snpCol] %in% snpList,]
+  gwas_df<-gwas_df[gwas_df[,snpCol] %in% snpList,]
   if (nrow(gwas_df) == 0) { return(list())}
   beta<-gwas_df[,betaCol] %>% unlist %>% unname
   var<-gwas_df[,seCol]^2 %>% unlist %>% unname
@@ -230,8 +234,8 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
     for (i in 1:ngenes){
       gene<-gene_list[i]
       cat("Processing gene",gene," ",i,"/",ngenes,"\n")
-      QTL_snps<-get_eqtl_snps(gene_id=gene,eqtl_df=eqtldf,snpCol=eqtlSNPCol,geneCol=1) #eqtlGeneCol)
-      
+      QTL_snps<-get_eqtl_snps(gene_id=gene,eqtl_df=eqtldf,snpCol=eqtlSNPCol,geneCol=eqtlGeneCol)
+      #print(QTL_snps)
       intersection<-base::intersect(GWAS_snps$snp,QTL_snps$snp)
       nsnps<-length(intersection)
       if (nsnps == 0) { print("0 snps present in intersection for this gene. skipping"); next}
@@ -240,9 +244,11 @@ main<-function(eqtl,gwas,mode="bse", gene_list=NULL, directory='',
       cat(nsnps, "snps found in GWAS and eQTL intersection for this gene\n")
       print(head(intersection))
       GWAS_effects<-get_gwas_effects(gwas_df = gwasdf,betaCol = gwasBetaCol,seCol=gwasSeCol,snpCol=gwasSNPCol,snpList=intersection)
-      QTL_effects<-get_gene_eqtl_effects(gene_id=gene,eqtl_df = eqtldf,betaCol=eqtlBetaCol,seCol=eqtlSeCol,snpCol=eqtlSNPCol,snpList=intersection)
+      QTL_effects<-get_gene_eqtl_effects(gene_id=unique(gene),eqtl_df = eqtldf,betaCol=eqtlBetaCol,seCol=eqtlSeCol,snpCol=eqtlSNPCol,snpList=intersection)
       print(length(GWAS_effects$beta))
+      #print(head(QTL_effects))
       print(length(QTL_effects$beta))
+  
       if (length(GWAS_effects$beta) != length(QTL_effects$beta)) { print("List of effect sizes of differing lengths. Duplicates SNPs may be present. Please resolve and rerun. Exiting."); return()}
       print('after effect sizes check')
 

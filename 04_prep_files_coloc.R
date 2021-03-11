@@ -53,9 +53,9 @@ for(pop in 1:length(pops)){ #read in pop's .frq file for MAF
 
 #    if(!file.exists("/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt")){
     # write out the files that will be used to run coloc
-    	fwrite(pQTL_write, "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", quote = F, sep = "\t", na = "NA", row.names = F, col.names = T)
+    	fwrite(unique(pQTL_write), "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", quote = F, sep = "\t", na = "NA", row.names = F, col.names = T)
     	gzip("/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", destname = "/home/egeoffroy/LD_matrix/coloc/pQTL_" %&% pops[pop] %&% "_" %&% pheno %&% ".txt.gz") #script may only take .gz values so can't hurt to be too careful
-    	fwrite(GWAS_write, "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", row.names = F, col.names = T, sep = "\t", quote = F, na = "NA")
+    	fwrite(unique(GWAS_write), "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", row.names = F, col.names = T, sep = "\t", quote = F, na = "NA")
     	gzip("/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt", "/home/egeoffroy/LD_matrix/coloc/GWAS_TOPMED" %&% pops[pop] %&% "_" %&% pheno %&% ".txt.gz")
     	print("Completed with " %&% pops[pop] %&% ", for " %&% pheno %&% ".")
     } else{

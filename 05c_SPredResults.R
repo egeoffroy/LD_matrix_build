@@ -13,7 +13,9 @@ pop <- args[1]
 print(pop)
 
 
-files <- list.files('/home/egeoffroy/topmed/SPrediXcan/Wojcik2', pattern = '_all_sig_genes.csv', recursive = F, full.names=T)
+files <- list.files('/home/igregga/topmed/proteome/PAGE', pattern = '_bonferroni_all_pheno.csv', recursive = F, full.names=T)
+files2 <- list.files('/home/egeoffroy/topmed/SPrediXcan/Wojcik/baseline', pattern = '_all_pheno.csv' recursive = F, full.names=T)
+files <- c(files, files2)
 SPrediXcan_Results <- data.frame()
 for(file in files){
 	file <- fread(file, header= T, sep = ',', stringsAsFactors=F)
@@ -31,6 +33,7 @@ if(pop=='CHN'){sample_size<-71}
 if(pop=='HIS'){sample_size<-301}
 
 SPred_pop <- SPrediXcan_Results %>% filter(Population == pop) %>% select(gene, Phenotype)
+SPred_pop$Phenotype <- str_replace_all(SPred_pop$Phenotype, 'LDL_choleseterol', 'LDL_cholesterol')
 print(SPred_pop)
 
 #for(i in 1:nrow(SPred_pop)){
